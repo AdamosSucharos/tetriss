@@ -11,10 +11,10 @@ using namespace std;
 wstring tvary[7];
 int sirka = 12;
 int vyska = 18;
-unsigned char* pField = nullptr;
+unsigned char* pole = nullptr;
 
-int nScreenWidth = 80;
-int nScreenHeight = 30;
+int sirkaObrazu = 80;
+int vyskaObrazu = 30;
 
 int Rotate(int px, int py, int r) {
     switch (r % 4) {
@@ -34,7 +34,7 @@ bool DoesPieceFit(int nTetromino, int nRotation, int nPosX, int nPosY) {
             int fi = (nPosY + py) * sirka + (nPosX + px);
             if (nPosX + px >= 0 && nPosX + px < sirka) {
                 if (nPosY + py >= 0 && nPosY + py < vyska) {
-                    if (tvary[nTetromino][pi] == L'X' && pField[fi] != 0)
+                    if (tvary[nTetromino][pi] == L'X' && pole[fi] != 0)
                         return false;
                 }
             }
@@ -78,95 +78,95 @@ int main()
     tvary[6].append(L".XX.");
     tvary[6].append(L".X..");
     tvary[6].append(L".X..");
-
-    pField = new unsigned char[sirka * vyska];
+    
+    pole = new unsigned char[sirka * vyska];
     for (int x = 0; x < sirka; x++)
         for (int y = 0; y < vyska; y++)
-            pField[y * sirka + x] = (x == 0 || x == sirka - 1 || y == vyska - 1) ? 9 : 0;
+            pole[y * sirka + x] = (x == 0 || x == sirka - 1 || y == vyska - 1) ? 9 : 0;
 
-    wchar_t* screen = new wchar_t[nScreenWidth * nScreenHeight];
-    for (int i = 0; i < nScreenWidth * nScreenHeight; i++) screen[i] = L' ';
+    wchar_t* screen = new wchar_t[sirkaObrazu * vyskaObrazu];
+    for (int i = 0; i < sirkaObrazu * vyskaObrazu; i++) screen[i] = L' ';
     HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
     SetConsoleActiveScreenBuffer(hConsole);
     DWORD dwBytesWritten = 0;
 
-    bool bGameOver = false;
+    bool koniecHry = false;
 
-    int nCurrentPiece = 0;
-    int nCurrentRotation = 0;
-    int nCurrentX = sirka / 2;
-    int nCurrentY = 0;
+    int kusy = 0;
+    int otacanie = 0;
+    int xx = sirka / 2;
+    int yy = 0;
 
-    bool bKey[4];
-    bool bRotateHold = false;
+    bool kluc[4];
+    bool drzanieOtocky = false;
 
-    int nSpeed = 20;
-    int nSpeedCounter = 0;
-    bool bForceDown = false;
-    int nPieceCount = 0;
-    int nScore = 0;
+    int rychlost = 20;
+    int meracRychlosti = 0;
+    bool dole = false;
+    int pocitacKusov = 0;
+    int skore = 0;
 
     std::vector<int> vLines;
 
-    while (!bGameOver) {
+    while (!koniecHry) {
         // Game Timing
         std::this_thread::sleep_for(50ms);
-        nSpeedCounter++;
-        bForceDown = (nSpeedCounter == nSpeed);
+        meracRychlosti++;
+        dole = (meracRychlosti == rychlost);
 
         // Input
         for (int k = 0; k < 4; k++)
-            bKey[k] = (0x8000 & GetAsyncKeyState((unsigned char)("\x27\x25\x28Z"[k]))) != 0;
+            kluc[k] = (0x8000 & GetAsyncKeyState((unsigned char)("\x27\x25\x28Z"[k]))) != 0;
 
         // Game Logic
-        nCurrentX -= (bKey[1] && DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX - 1, nCurrentY)) ? 1 : 0;
-        nCurrentX += (bKey[0] && DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX + 1, nCurrentY)) ? 1 : 0;
-        nCurrentY += (bKey[2] && DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1)) ? 1 : 0;
+        xx -= (kluc[1] && DoesPieceFit(kusy, otacanie, xx - 1, yy)) ? 1 : 0;
+        xx += (kluc[0] && DoesPieceFit(kusy, otacanie, xx + 1, yy)) ? 1 : 0;
+        yy += (kluc[2] && DoesPieceFit(kusy, otacanie, xx, yy + 1)) ? 1 : 0;
 
-        if (bKey[3]) {
+        if (kluc[3]) {
 
-            nCurrentRotation += (!bRotateHold && DoesPieceFit(nCurrentPiece, nCurrentRotation + 1, nCurrentX, nCurrentY)) ? 1 : 0;
-            bRotateHold = true;
+            otacanie += (!drzanieOtocky && DoesPieceFit(kusy, otacanie + 1, xx, yy)) ? 1 : 0;
+            drzanieOtocky = true;
         }
-        else bRotateHold = false;
+        else drzanieOtocky = false;
 
-        if (bForceDown) {
-            if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1))
-                nCurrentY++;
+        if (dole) {
+            if (DoesPieceFit(kusy, otacanie, xx, yy + 1))
+                yy++;
             else {
                 // Lock
                 for (int px = 0; px < 4; px++)
                     for (int py = 0; py < 4; py++)
-                        if (tvary[nCurrentPiece][Rotate(px, py, nCurrentRotation)] == L'X')
-                            pField[(nCurrentY + py) * sirka + (nCurrentX + px)] = nCurrentPiece + 1;
-                nPieceCount++;
-                if (nPieceCount % 10 == 0)
-                    if (nSpeed >= 10) nSpeed--;
+                        if (tvary[kusy][Rotate(px, py, otacanie)] == L'X')
+                            pole[(yy + py) * sirka + (xx + px)] = kusy + 1;
+                pocitacKusov++;
+                if (pocitacKusov % 10 == 0)
+                    if (rychlost >= 10) rychlost--;
                 // Check for lines
                 for (int py = 0; py < 4; py++)
-                    if (nCurrentY + py < vyska - 1) {
+                    if (yy + py < vyska - 1) {
                         bool bLine = true;
                         for (int px = 1; px < sirka - 1; px++)
-                            bLine &= (pField[(nCurrentY + py) * sirka + px]) != 0;
+                            bLine &= (pole[(yy + py) * sirka + px]) != 0;
                         if (bLine) {
                             for (int px = 1; px < sirka - 1; px++)
-                                pField[(nCurrentY + py) * sirka + px] = 8;
+                                pole[(yy + py) * sirka + px] = 8;
 
-                            vLines.push_back(nCurrentY + py);
+                            vLines.push_back(yy + py);
                         }
                     }
-                nScore += 25;
-                if (!vLines.empty()) nScore += (1 << vLines.size()) * 100;
+                skore += 25;
+                if (!vLines.empty()) skore += (1 << vLines.size()) * 100;
                 // Choose next piece
-                nCurrentX = sirka / 2;
-                nCurrentY = 0;
-                nCurrentRotation = 0;
-                nCurrentPiece = rand() % 7;
+                xx = sirka / 2;
+                yy = 0;
+                otacanie = 0;
+                kusy = rand() % 7;
 
                 // game over
-                bGameOver = !DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY);
+                koniecHry = !DoesPieceFit(kusy, otacanie, xx, yy);
             }
-            nSpeedCounter = 0;
+            meracRychlosti = 0;
         }
         // Render Output
 
@@ -174,35 +174,35 @@ int main()
         // Draw Field
         for (int x = 0; x < sirka; x++)
             for (int y = 0; y < vyska; y++)
-                screen[(y + 2) * nScreenWidth + (x + 2)] = L" ABCDEFG=#"[pField[y * sirka + x]];
+                screen[(y + 2) * sirkaObrazu + (x + 2)] = L" ABCDEFG=#"[pole[y * sirka + x]];
 
         // Draw Current Piece
         for (int px = 0; px < 4; px++)
             for (int py = 0; py < 4; py++)
-                if (tvary[nCurrentPiece][Rotate(px, py, nCurrentRotation)] == L'X')
-                    screen[(nCurrentY + py + 2) * nScreenWidth + (nCurrentX + px + 2)] = nCurrentPiece + 65;
+                if (tvary[kusy][Rotate(px, py, otacanie)] == L'X')
+                    screen[(yy + py + 2) * sirkaObrazu + (xx + px + 2)] = kusy + 65;
 
         // Draw Score
-        swprintf_s(&screen[2 * nScreenWidth + vyska + 6], 16, L"SKÓRE: %8d", nScore);
+        swprintf_s(&screen[2 * sirkaObrazu + vyska + 6], 16, L"SKÓRE: %8d", skore);
 
         if (!vLines.empty()) {
-            WriteConsoleOutputCharacter(hConsole, screen, nScreenWidth * nScreenHeight, { 0,0 }, &dwBytesWritten);
+            WriteConsoleOutputCharacter(hConsole, screen, sirkaObrazu * vyskaObrazu, { 0,0 }, &dwBytesWritten);
             this_thread::sleep_for(400ms);
 
             for (auto& v : vLines)
                 for (int px = 1; px < sirka - 1; px++) {
                     for (int py = v; py > 0; py--)
-                        pField[py * sirka + px] = pField[(py - 1) * sirka + px];
-                    pField[px] = 0;
+                        pole[py * sirka + px] = pole[(py - 1) * sirka + px];
+                    pole[px] = 0;
                 }
             vLines.clear();
         }
 
-        WriteConsoleOutputCharacter(hConsole, screen, nScreenWidth * nScreenHeight, { 0,0 }, &dwBytesWritten);
+        WriteConsoleOutputCharacter(hConsole, screen, sirkaObrazu * vyskaObrazu, { 0,0 }, &dwBytesWritten);
     }
     // GG no re
     CloseHandle(hConsole);
-    cout << "Game Over! Final Score:" << nScore << endl;
+    cout << "Game Over! Final Score:" << skore << endl;
     system("pause");
     return 0;
 }
